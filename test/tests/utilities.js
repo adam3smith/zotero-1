@@ -44,12 +44,12 @@ describe("Zotero.Utilities", function() {
 				assert.equal(cleanISBN('9781' + ignoredChars.charAt(i) + '234567897'), '9781234567897', 'stripped off ' + charCode);
 			}
 			assert.equal(cleanISBN('9781' + ignoredChars + '234567897'), '9781234567897', 'stripped off all ignored characters');
-			
+
 			let isbnChars = ignoredChars + '1234567890';
 			for (let i=1; i<1327; i++) { // More common characters through Cyrillic letters
 				let c = String.fromCharCode(i);
 				if (isbnChars.indexOf(c) != -1) continue;
-				
+
 				let charCode = '\\u' + Zotero.Utilities.lpad(i.toString(16).toUpperCase(), '0', 4);
 				assert.isFalse(cleanISBN('9781' + c + '234567897'), 'did not ignore internal character ' + charCode);
 			}
@@ -141,12 +141,12 @@ describe("Zotero.Utilities", function() {
 				assert.equal(cleanISSN('1' + ignoredChars.charAt(i) + '2345679'), '1234-5679', 'stripped off ' + charCode);
 			}
 			assert.equal(cleanISSN('1' + ignoredChars + '2345679'), '1234-5679', 'stripped off all ignored characters');
-			
+
 			let isbnChars = ignoredChars + '1234567890';
 			for (let i=1; i<1327; i++) { // More common characters through Cyrillic letters
 				let c = String.fromCharCode(i);
 				if (isbnChars.indexOf(c) != -1) continue;
-				
+
 				let charCode = '\\u' + Zotero.Utilities.lpad(i.toString(16).toUpperCase(), '0', 4);
 				assert.isFalse(cleanISSN('1' + c + '2345679'), 'did not ignore internal character ' + charCode);
 			}
@@ -176,7 +176,7 @@ describe("Zotero.Utilities", function() {
 		it("should accept Zotero.Item and Zotero export item format", function() {
 			let data = populateDBWithSampleData(loadSampleData('journalArticle'));
 			let item = Zotero.Items.get(data.journalArticle.id);
-			
+
 			let fromZoteroItem;
 			try {
 				fromZoteroItem = Zotero.Utilities.itemToCSLJSON(item);
@@ -185,8 +185,8 @@ describe("Zotero.Utilities", function() {
 			}
 			assert.isObject(fromZoteroItem, 'converts Zotero Item to object');
 			assert.isNotNull(fromZoteroItem, 'converts Zotero Item to non-null object');
-			
-			
+
+
 			let fromExportItem;
 			try {
 				fromExportItem = Zotero.Utilities.itemToCSLJSON(
@@ -197,14 +197,14 @@ describe("Zotero.Utilities", function() {
 			}
 			assert.isObject(fromExportItem, 'converts Zotero export item to object');
 			assert.isNotNull(fromExportItem, 'converts Zotero export item to non-null object');
-			
+
 			assert.deepEqual(fromZoteroItem, fromExportItem, 'conversion from Zotero Item and from export item are the same');
 		});
 		it("should convert standalone notes to expected format", function() {
 			let note = new Zotero.Item('note');
 			note.setNote('Some note longer than 50 characters, which will become the title.');
 			note = Zotero.Items.get(note.save());
-			
+
 			let cslJSONNote = Zotero.Utilities.itemToCSLJSON(note);
 			assert.equal(cslJSONNote.type, 'article', 'note is exported as "article"');
 			assert.equal(cslJSONNote.title, note.getNoteTitle(), 'note title is set to Zotero pseudo-title');
@@ -212,15 +212,15 @@ describe("Zotero.Utilities", function() {
 		it("should convert standalone attachments to expected format", function() {
 			let file = getTestDataDirectory();
 			file.append("empty.pdf");
-			
+
 			let attachment = Zotero.Items.get(Zotero.Attachments.importFromFile(file));
 			attachment.setField('title', 'Empty');
 			attachment.setField('accessDate', '2001-02-03 12:13:14');
 			attachment.setField('url', 'http://example.com');
 			attachment.setNote('Note');
-			
+
 			attachment.save();
-			
+
 			let cslJSONAttachment = Zotero.Utilities.itemToCSLJSON(attachment);
 			assert.equal(cslJSONAttachment.type, 'article', 'attachment is exported as "article"');
 			assert.equal(cslJSONAttachment.title, 'Empty', 'attachment title is correct');
@@ -229,47 +229,49 @@ describe("Zotero.Utilities", function() {
 		it("should refuse to convert unexpected item types", function() {
 			let data = populateDBWithSampleData(loadSampleData('journalArticle'));
 			let item = Zotero.Items.get(data.journalArticle.id);
-			
+
 			let exportFormat = Zotero.Utilities.Internal.itemToExportFormat(item);
 			exportFormat.itemType = 'foo';
-			
+
 			assert.throws(Zotero.Utilities.itemToCSLJSON.bind(Zotero.Utilities, exportFormat), /^Unexpected Zotero Item type ".*"$/, 'throws an error when trying to map invalid item types');
 		});
 		it("should map additional fields from Extra field", function() {
 			let item = new Zotero.Item('journalArticle');
 			item.setField('extra', 'PMID: 12345\nPMCID:123456');
 			item = Zotero.Items.get(item.save());
-			
+
 			let cslJSON = Zotero.Utilities.itemToCSLJSON(item);
-			
+
 			assert.equal(cslJSON.PMID, '12345', 'PMID from Extra is mapped to PMID');
 			assert.equal(cslJSON.PMCID, '123456', 'PMCID from Extra is mapped to PMCID');
-			
+
 			item.setField('extra', 'PMID: 12345');
 			item.save();
 			cslJSON = Zotero.Utilities.itemToCSLJSON(item);
-			
+
 			assert.equal(cslJSON.PMID, '12345', 'single-line entry is extracted correctly');
-			
-			item.setField('extra', 'some junk: note\nPMID: 12345\nstuff in-between\nPMCID: 123456\nlast bit of junk!');
+
+			item.setField('extra', 'some junk: note\nPMID: 12345\nstuff in-between\nPMCID: 123456\nDOI: 10.5064/F6PN93H4\nlast bit of junk!');
 			item.save();
 			cslJSON = Zotero.Utilities.itemToCSLJSON(item);
-			
+
 			assert.equal(cslJSON.PMID, '12345', 'PMID from mixed Extra field is mapped to PMID');
 			assert.equal(cslJSON.PMCID, '123456', 'PMCID from mixed Extra field is mapped to PMCID');
-			
-			item.setField('extra', 'a\n PMID: 12345\nfoo PMCID: 123456');
+			assert.equal(cslJSON.DOI, '10.5064/F6PN93H4', 'DOI from mixed Extra field is mapped to DOI');
+
+			item.setField('extra', 'a\n PMID: 12345\nfoo PMCID: 123456\n 10.5064/F6PN93H4');
 			item.save();
 			cslJSON = Zotero.Utilities.itemToCSLJSON(item);
-			
+
 			assert.isUndefined(cslJSON.PMCID, 'field label must not be preceded by other text');
 			assert.isUndefined(cslJSON.PMID, 'field label must not be preceded by a space');
-			assert.equal(cslJSON.note, 'a\n PMID: 12345\nfoo PMCID: 123456', 'note is left untouched if nothing is extracted');
-			
+			assert.isUndefined(cslJSON.DOI, 'DOI must be preceded by label');
+			assert.equal(cslJSON.note, 'a\n PMID: 12345\nfoo PMCID: 123456\n10.5064/F6PN93H4', 'note is left untouched if nothing is extracted');
+
 			item.setField('extra', 'something\npmid: 12345\n');
 			item.save();
 			cslJSON = Zotero.Utilities.itemToCSLJSON(item);
-			
+
 			assert.isUndefined(cslJSON.PMID, 'field labels are case-sensitive');
 		});
 		it("should parse particles in creator names", function() {
@@ -338,17 +340,17 @@ describe("Zotero.Utilities", function() {
 					}
 				}
 			];
-			
+
 			let data = populateDBWithSampleData({
 				item: {
 					itemType: 'journalArticle',
 					creators: creators
 				}
 			});
-				
+
 			let item = Zotero.Items.get(data.item.id);
 			let cslCreators = Zotero.Utilities.itemToCSLJSON(item).author;
-			
+
 			assert.deepEqual(cslCreators[0], creators[0].expect, 'simple name is not parsed');
 			assert.deepEqual(cslCreators[1], creators[1].expect, 'name with dropping and non-dropping particles is parsed');
 			assert.deepEqual(cslCreators[2], creators[2].expect, 'name with only non-dropping particle is parsed');
@@ -360,58 +362,58 @@ describe("Zotero.Utilities", function() {
 	describe("itemFromCSLJSON", function() {
 		it("should stably perform itemToCSLJSON -> itemFromCSLJSON -> itemToCSLJSON", function() {
 			let data = loadSampleData('citeProcJSExport');
-			
+
 			Zotero.DB.beginTransaction();
-			
+
 			for (let i in data) {
 				let item = data[i];
-				
+
 				let zItem = new Zotero.Item();
 				Zotero.Utilities.itemFromCSLJSON(zItem, item);
 				zItem = Zotero.Items.get(zItem.save());
-				
+
 				let newItem = Zotero.Utilities.itemToCSLJSON(zItem);
-				
+
 				delete newItem.id;
 				delete item.id;
-				
+
 				assert.deepEqual(newItem, item, i + ' export -> import -> export is stable');
 			}
-			
+
 			Zotero.DB.commitTransaction();
-			
+
 		});
 		it("should import exported standalone note", function() {
 			let note = new Zotero.Item('note');
 			note.setNote('Some note longer than 50 characters, which will become the title.');
 			note = Zotero.Items.get(note.save());
-			
+
 			let jsonNote = Zotero.Utilities.itemToCSLJSON(note);
-			
+
 			let zItem = new Zotero.Item();
 			Zotero.Utilities.itemFromCSLJSON(zItem, jsonNote);
 			zItem = Zotero.Items.get(zItem.save());
-			
+
 			assert.equal(zItem.getField('title'), jsonNote.title, 'title imported correctly');
 		});
 		it("should import exported standalone attachment", function() {
 			let file = getTestDataDirectory();
 			file.append("empty.pdf");
-			
+
 			let attachment = Zotero.Items.get(Zotero.Attachments.importFromFile(file));
 			attachment.setField('title', 'Empty');
 			attachment.setField('accessDate', '2001-02-03 12:13:14');
 			attachment.setField('url', 'http://example.com');
 			attachment.setNote('Note');
-			
+
 			attachment.save();
-			
+
 			let jsonAttachment = Zotero.Utilities.itemToCSLJSON(attachment);
-			
+
 			let zItem = new Zotero.Item();
 			Zotero.Utilities.itemFromCSLJSON(zItem, jsonAttachment);
 			zItem = Zotero.Items.get(zItem.save());
-			
+
 			assert.equal(zItem.getField('title'), jsonAttachment.title, 'title imported correctly');
 		});
 	});
